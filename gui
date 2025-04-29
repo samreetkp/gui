@@ -1,0 +1,107 @@
+import tkinter as tk
+import time
+
+class KernelSimulator(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Kernel Architecture Simulator")
+        self.geometry("700x500")
+        self.configure(bg="#f0f0f0")
+
+        self.label = tk.Label(self, text="Kernel Architecture Simulation", font=("Arial", 18, "bold"), bg="#f0f0f0")
+        self.label.pack(pady=10)
+
+        self.canvas = tk.Canvas(self, width=680, height=250, bg="white", highlightthickness=1, highlightbackground="gray")
+        self.canvas.pack(pady=10)
+
+        self.output = tk.Text(self, height=10, width=85, font=("Courier", 10))
+        self.output.pack()
+
+        button_frame = tk.Frame(self, bg="#f0f0f0")
+        button_frame.pack(pady=10)
+
+        tk.Button(button_frame, text="Run Monolithic Simulation", command=self.run_monolithic, width=25).grid(row=0, column=0, padx=10)
+        tk.Button(button_frame, text="Run Microkernel Simulation (Step Mode)", command=self.start_microkernel_step_mode, width=35).grid(row=0, column=1, padx=10)
+
+        self.step_btn = tk.Button(self, text="Next Step", command=self.next_step, state=tk.DISABLED)
+        self.step_btn.pack(pady=5)
+
+        # For step mode tracking
+        self.micro_steps = []
+        self.step_index = 0
+
+    def log(self, text):
+        self.output.insert(tk.END, text + "\n")
+        self.output.see(tk.END)
+        self.update()
+
+    def clear_output(self):
+        self.output.delete("1.0", tk.END)
+
+    def clear_canvas(self):
+        self.canvas.delete("all")
+
+    def run_monolithic(self):
+        self.clear_output()
+        self.clear_canvas()
+        self.log("=== Monolithic Kernel ===")
+        self.log("[User] Requesting file read operation...")
+        self.log("[Kernel] Direct call to File System Service.")
+        self.log("[File System] Performing file read operation...")
+        self.log("[Kernel] Direct call to Device Driver Service.")
+        self.log("[Device Driver] Accessing hardware device...")
+        self.log("[Monolithic Kernel] All services completed.")
+
+    def animate_message(self, text, x1, y1, x2, y2):
+        label = self.canvas.create_text(x1, y1, text=text, anchor="w", fill="blue", font=("Arial", 10, "bold"))
+        steps = 30
+        dx = (x2 - x1) / steps
+        dy = (y2 - y1) / steps
+        for _ in range(steps):
+            self.canvas.move(label, dx, dy)
+            self.update()
+            time.sleep(0.02)
+
+    def start_microkernel_step_mode(self):
+        self.clear_output()
+        self.clear_canvas()
+        self.step_index = 0
+        self.micro_steps = [
+            lambda: self.log("[User] Sending request to kernel..."),
+            lambda: self.animate_message("Request", 80, 50, 250, 50),
+            lambda: self.log("[Kernel] Message to File System Service: 'Read file'"),
+            lambda: self.animate_message("Read file", 250, 50, 550, 30),
+            lambda: self.log("[File System] Received message: 'Read file'"),
+            lambda: self.log("[File System] Processing file read..."),
+            lambda: self.log("[Kernel] Message to Device Driver Service: 'Access device'"),
+            lambda: self.animate_message("Access device", 250, 50, 550, 120),
+            lambda: self.log("[Device Driver] Received message: 'Access device'"),
+            lambda: self.log("[Device Driver] Processing device access..."),
+            lambda: self.log("[Microkernel] All messages processed.")
+        ]
+
+        # Draw system components
+        self.canvas.create_rectangle(50, 40, 130, 80, fill="#d0f0c0")  # User
+        self.canvas.create_text(90, 60, text="User", font=("Arial", 10))
+
+        self.canvas.create_rectangle(220, 40, 320, 80, fill="#f0d0d0")  # Kernel
+        self.canvas.create_text(270, 60, text="Microkernel", font=("Arial", 10))
+
+        self.canvas.create_rectangle(500, 20, 650, 60, fill="#d0d0f0")  # File System
+        self.canvas.create_text(575, 40, text="File System Service", font=("Arial", 10))
+
+        self.canvas.create_rectangle(500, 110, 650, 150, fill="#d0d0f0")  # Device Driver
+        self.canvas.create_text(575, 130, text="Device Driver Service", font=("Arial", 10))
+
+        self.step_btn.config(state=tk.NORMAL)
+
+    def next_step(self):
+        if self.step_index < len(self.micro_steps):
+            self.micro_steps[self.step_index]()
+            self.step_index += 1
+        else:
+            self.step_btn.config(state=tk.DISABLED)
+
+if __name__ == "__main__":
+    app = KernelSimulator()
+    app.mainloop()
