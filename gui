@@ -11,10 +11,10 @@ class KernelSimulator(tk.Tk):
         self.label = tk.Label(self, text="Kernel Architecture Simulation", font=("Arial", 18, "bold"), bg="#f0f0f0")
         self.label.pack(pady=10)
 
-        self.canvas = tk.Canvas(self, width=680, height=250, bg="white", highlightthickness=1, highlightbackground="gray")
+        self.canvas = tk.Canvas(self, width=680, height=300, bg="white", highlightthickness=1, highlightbackground="gray")
         self.canvas.pack(pady=10)
 
-        self.output = tk.Text(self, height=10, width=85, font=("Courier", 10))
+        self.output = tk.Text(self, height=8, width=85, font=("Courier", 10))
         self.output.pack()
 
         button_frame = tk.Frame(self, bg="#f0f0f0")
@@ -41,15 +41,52 @@ class KernelSimulator(tk.Tk):
     def clear_canvas(self):
         self.canvas.delete("all")
 
+    def animate_arrow(self, x1, y1, x2, y2, color="black"):
+        arrow = self.canvas.create_line(x1, y1, x2, y2, arrow=tk.LAST, width=2, fill=color)
+        self.update()
+        time.sleep(0.8)
+        return arrow
+
+    def animate_box(self, x, y, text, color="#cce6ff"):
+        box = self.canvas.create_rectangle(x-60, y-20, x+60, y+20, fill=color, outline="black")
+        label = self.canvas.create_text(x, y, text=text, font=("Arial", 10))
+        self.update()
+        time.sleep(0.5)
+        return box, label
+
     def run_monolithic(self):
         self.clear_output()
         self.clear_canvas()
-        self.log("=== Monolithic Kernel ===")
+        self.log("=== Monolithic Kernel Simulation ===")
+
+        # Step 1: User Application
+        user_box, _ = self.animate_box(150, 100, "User Application")
+
+        # Step 2: Monolithic Kernel (big box)
+        kernel_box, _ = self.animate_box(450, 100, "Monolithic Kernel", color="#f0d0d0")
+
+        # Direct system call (arrow from User -> Kernel)
+        self.animate_arrow(150, 100, 450, 100)
         self.log("[User] Requesting file read operation...")
+
+        time.sleep(1)
+
+        # Step 3: File System inside Kernel
+        fs_box, _ = self.animate_box(450, 200, "File System Service", color="#ffe6cc")
+        self.animate_arrow(450, 100, 450, 200)
         self.log("[Kernel] Direct call to File System Service.")
         self.log("[File System] Performing file read operation...")
+
+        time.sleep(1)
+
+        # Step 4: Device Driver inside Kernel
+        driver_box, _ = self.animate_box(450, 280, "Device Driver Service", color="#ffe6cc")
+        self.animate_arrow(450, 200, 450, 280)
         self.log("[Kernel] Direct call to Device Driver Service.")
         self.log("[Device Driver] Accessing hardware device...")
+
+        time.sleep(1)
+
         self.log("[Monolithic Kernel] All services completed.")
 
     def animate_message(self, text, x1, y1, x2, y2):
@@ -80,17 +117,17 @@ class KernelSimulator(tk.Tk):
             lambda: self.log("[Microkernel] All messages processed.")
         ]
 
-        # Draw system components
+        # Draw Microkernel components
         self.canvas.create_rectangle(50, 40, 130, 80, fill="#d0f0c0")  # User
         self.canvas.create_text(90, 60, text="User", font=("Arial", 10))
 
-        self.canvas.create_rectangle(220, 40, 320, 80, fill="#f0d0d0")  # Kernel
+        self.canvas.create_rectangle(220, 40, 320, 80, fill="#f0d0d0")  # Microkernel
         self.canvas.create_text(270, 60, text="Microkernel", font=("Arial", 10))
 
-        self.canvas.create_rectangle(500, 20, 650, 60, fill="#d0d0f0")  # File System
+        self.canvas.create_rectangle(500, 20, 650, 60, fill="#d0d0f0")  # File System Service
         self.canvas.create_text(575, 40, text="File System Service", font=("Arial", 10))
 
-        self.canvas.create_rectangle(500, 110, 650, 150, fill="#d0d0f0")  # Device Driver
+        self.canvas.create_rectangle(500, 110, 650, 150, fill="#d0d0f0")  # Device Driver Service
         self.canvas.create_text(575, 130, text="Device Driver Service", font=("Arial", 10))
 
         self.step_btn.config(state=tk.NORMAL)
