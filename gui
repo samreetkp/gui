@@ -1,139 +1,193 @@
-import tkinter as tk
-import time
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kernel Architecture Simulator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 32px;
+    }
+    canvas {
+      background: white;
+      border: 1px solid gray;
+      margin: 10px auto;
+      display: block;
+    }
+    #log {
+      width: 90%;
+      height: 180px;
+      border: 1px solid #ccc;
+      background: #fff;
+      font-family: monospace;
+      font-size: 14px;
+      text-align: left;
+      margin: 10px auto;
+      padding: 10px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    button {
+      width: 300px;
+      height: 50px;
+      font-size: 16px;
+      margin: 10px;
+      border: 2px solid black;
+      background-color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Kernel Architecture Simulation</h1>
+  <canvas id="simCanvas" width="950" height="400"></canvas>
+  <div id="log"></div>
+  <button onclick="runMonolithic()">Run Monolithic Simulation</button>
+  <button onclick="startMicrokernel()">Run Microkernel Simulation (Step Mode)</button>
+  <button onclick="nextStep()" id="nextBtn" disabled>Next Step</button>
 
-class KernelSimulator(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Kernel Architecture Simulator")
-        self.geometry("950x700")
-        self.configure(bg="#f0f0f0")
+  <script>
+    const canvas = document.getElementById("simCanvas");
+    const ctx = canvas.getContext("2d");
+    const logBox = document.getElementById("log");
+    const nextBtn = document.getElementById("nextBtn");
 
-        # Updated Heading: Bigger font size, black color
-        self.label = tk.Label(self, text="Kernel Architecture Simulation", font=("Arial", 32, "bold"), bg="#f0f0f0", fg="black")
-        self.label.pack(pady=20)
+    let microSteps = [];
+    let stepIndex = 0;
 
-        self.canvas = tk.Canvas(self, width=900, height=400, bg="white", highlightthickness=1, highlightbackground="gray")
-        self.canvas.pack(pady=10)
+    function log(msg) {
+      logBox.textContent += msg + "\n";
+      logBox.scrollTop = logBox.scrollHeight;
+    }
 
-        # Updated Output Text Box: Bigger size
-        self.output = tk.Text(self, height=12, width=110, font=("Courier", 14))
-        self.output.pack()
+    function clearAll() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      logBox.textContent = "";
+    }
 
-        button_frame = tk.Frame(self, bg="#f0f0f0")
-        button_frame.pack(pady=10)
+    function drawBox(x, y, w, h, text, color = "#cce6ff") {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeRect(x, y, w, h);
+      ctx.fillStyle = "black";
+      ctx.font = "14px Arial";
+      ctx.textAlign = "center";
+      text.split("\n").forEach((line, i) => {
+        ctx.fillText(line, x + w / 2, y + h / 2 + i * 16 - 8);
+      });
+    }
 
-        tk.Button(button_frame, text="Run Monolithic Simulation", command=self.run_monolithic, width=30).grid(row=0, column=0, padx=10)
-        tk.Button(button_frame, text="Run Microkernel Simulation (Step Mode)", command=self.start_microkernel_step_mode, width=35).grid(row=0, column=1, padx=10)
+    function drawArrow(x1, y1, x2, y2) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 3;
+      ctx.stroke();
 
-        self.step_btn = tk.Button(self, text="Next Step", command=self.next_step, state=tk.DISABLED, width=20)
-        self.step_btn.pack(pady=5)
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+      const headlen = 10;
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
+      ctx.lineTo(x2, y2);
+      ctx.fill();
+    }
 
-        self.micro_steps = []
-        self.step_index = 0
+    function delay(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
 
-    def log(self, text):
-        self.output.insert(tk.END, text + "\n")
-        self.output.see(tk.END)
-        self.update()
+    async function runMonolithic() {
+      clearAll();
+      log("=== Monolithic Kernel Simulation ===");
 
-    def clear_output(self):
-        self.output.delete("1.0", tk.END)
+      drawBox(100, 80, 160, 60, "User Application");
+      drawBox(500, 80, 200, 60, "Monolithic Kernel\n(File System + Driver)", "#f0d0d0");
 
-    def clear_canvas(self):
-        self.canvas.delete("all")
+      drawArrow(260, 110, 500, 110);  // Clean arrow, no animated message
+      log("[User] Requesting file read operation...");
+      await delay(500);
 
-    def animate_arrow(self, x1, y1, x2, y2, color="black"):
-        arrow = self.canvas.create_line(x1, y1, x2, y2, arrow=tk.LAST, width=3, fill=color)
-        self.update()
-        time.sleep(0.8)
-        return arrow
+      drawBox(500, 180, 160, 50, "File System Service", "#ffe6cc");
+      drawArrow(590, 140, 590, 180);
+      log("[Kernel] Direct call to File System Service.");
+      log("[File System] Performing file read operation...");
+      await delay(1000);
 
-    def animate_box(self, x, y, text, color="#cce6ff"):
-        box = self.canvas.create_rectangle(x-80, y-30, x+80, y+30, fill=color, outline="black")
-        label = self.canvas.create_text(x, y, text=text, font=("Arial", 14), fill="black")
-        self.update()
-        time.sleep(0.5)
-        return box, label
+      drawBox(500, 260, 180, 50, "Device Driver Service", "#ffe6cc");
+      drawArrow(590, 230, 590, 260);
+      log("[Kernel] Direct call to Device Driver Service.");
+      log("[Device Driver] Accessing hardware device...");
+      await delay(1000);
 
-    def run_monolithic(self):
-        self.clear_output()
-        self.clear_canvas()
-        self.log("=== Monolithic Kernel Simulation ===")
+      log("[Monolithic Kernel] All services completed.");
+    }
 
-        user_box, _ = self.animate_box(200, 120, "User Application")
-        kernel_box, _ = self.animate_box(600, 120, "Monolithic Kernel\n(File System + Driver)", color="#f0d0d0")
+    function startMicrokernel() {
+      clearAll();
+      stepIndex = 0;
+      nextBtn.disabled = false;
 
-        self.animate_arrow(200, 120, 600, 120)
-        self.log("[User] Requesting file read operation...")
+      drawMicrokernelLayout();
 
-        time.sleep(1)
+      microSteps = [
+        () => log("[User] Sending request to kernel..."),
+        () => animateMessageMicrokernel("Request", 100, 70, 280, 70),
+        () => log("[Kernel] Message to File System Service: 'Read file'"),
+        () => animateMessageMicrokernel("Read file", 280, 70, 600, 55),
+        () => log("[File System] Received message: 'Read file'"),
+        () => log("[File System] Processing file read..."),
+        () => log("[Kernel] Message to Device Driver Service: 'Access device'"),
+        () => animateMessageMicrokernel("Access device", 280, 70, 600, 155),
+        () => log("[Device Driver] Received message: 'Access device'"),
+        () => log("[Device Driver] Processing device access..."),
+        () => log("[Microkernel] All messages processed."),
+      ];
+    }
 
-        fs_box, _ = self.animate_box(600, 250, "File System Service", color="#ffe6cc")
-        self.animate_arrow(600, 120, 600, 250)
-        self.log("[Kernel] Direct call to File System Service.")
-        self.log("[File System] Performing file read operation...")
+    function drawMicrokernelLayout() {
+      drawBox(60, 50, 120, 60, "User", "#d0f0c0");
+      drawBox(260, 50, 120, 60, "Microkernel", "#f0d0d0");
+      drawBox(600, 30, 160, 50, "File System Service", "#d0d0f0");
+      drawBox(600, 130, 160, 50, "Device Driver Service", "#d0d0f0");
+    }
 
-        time.sleep(1)
+    async function animateMessageMicrokernel(text, x1, y1, x2, y2) {
+      const steps = 30;
+      const dx = (x2 - x1) / steps;
+      const dy = (y2 - y1) / steps;
+      let x = x1;
+      let y = y1;
 
-        driver_box, _ = self.animate_box(600, 350, "Device Driver Service", color="#ffe6cc")
-        self.animate_arrow(600, 250, 600, 350)
-        self.log("[Kernel] Direct call to Device Driver Service.")
-        self.log("[Device Driver] Accessing hardware device...")
+      for (let i = 0; i < steps; i++) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawMicrokernelLayout();
+        ctx.font = "bold 14px Arial";
+        ctx.fillStyle = "blue";
+        ctx.fillText(text, x, y);
+        await delay(20);
+        x += dx;
+        y += dy;
+      }
+    }
 
-        time.sleep(1)
-
-        self.log("[Monolithic Kernel] All services completed.")
-
-    def animate_message(self, text, x1, y1, x2, y2):
-        label = self.canvas.create_text(x1, y1, text=text, anchor="w", fill="blue", font=("Arial", 12, "bold"))
-        steps = 30
-        dx = (x2 - x1) / steps
-        dy = (y2 - y1) / steps
-        for _ in range(steps):
-            self.canvas.move(label, dx, dy)
-            self.update()
-            time.sleep(0.02)
-
-    def start_microkernel_step_mode(self):
-        self.clear_output()
-        self.clear_canvas()
-        self.step_index = 0
-        self.micro_steps = [
-            lambda: self.log("[User] Sending request to kernel..."),
-            lambda: self.animate_message("Request", 100, 70, 320, 70),
-            lambda: self.log("[Kernel] Message to File System Service: 'Read file'"),
-            lambda: self.animate_message("Read file", 320, 70, 750, 60),
-            lambda: self.log("[File System] Received message: 'Read file'"),
-            lambda: self.log("[File System] Processing file read..."),
-            lambda: self.log("[Kernel] Message to Device Driver Service: 'Access device'"),
-            lambda: self.animate_message("Access device", 320, 70, 750, 160),
-            lambda: self.log("[Device Driver] Received message: 'Access device'"),
-            lambda: self.log("[Device Driver] Processing device access..."),
-            lambda: self.log("[Microkernel] All messages processed.")
-        ]
-
-        # Draw Microkernel components
-        self.canvas.create_rectangle(60, 50, 180, 110, fill="#d0f0c0", outline="black")  # User
-        self.canvas.create_text(120, 80, text="User", font=("Arial", 14), fill="black")
-
-        self.canvas.create_rectangle(280, 50, 400, 110, fill="#f0d0d0", outline="black")  # Microkernel
-        self.canvas.create_text(340, 80, text="Microkernel", font=("Arial", 14), fill="black")
-
-        self.canvas.create_rectangle(700, 30, 850, 90, fill="#d0d0f0", outline="black")  # File System Service
-        self.canvas.create_text(775, 60, text="File System Service", font=("Arial", 14), fill="black")
-
-        self.canvas.create_rectangle(700, 130, 850, 190, fill="#d0d0f0", outline="black")  # Device Driver Service
-        self.canvas.create_text(775, 160, text="Device Driver Service", font=("Arial", 14), fill="black")
-
-        self.step_btn.config(state=tk.NORMAL)
-
-    def next_step(self):
-        if self.step_index < len(self.micro_steps):
-            self.micro_steps[self.step_index]()
-            self.step_index += 1
-        else:
-            self.step_btn.config(state=tk.DISABLED)
-
-if __name__ == "__main__":
-    app = KernelSimulator()
-    app.mainloop()
+    function nextStep() {
+      if (stepIndex < microSteps.length) {
+        microSteps[stepIndex]();
+        stepIndex++;
+      }
+      if (stepIndex >= microSteps.length) {
+        nextBtn.disabled = true;
+      }
+    }
+  </script>
+</body>
+</html>
